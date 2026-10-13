@@ -1,5 +1,6 @@
 const GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 let token = localStorage.getItem('bb_token');
+let role = localStorage.getItem('bb_role');
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const badge = (text) => {
@@ -21,7 +22,7 @@ async function api(path, method = 'GET', body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401 && path !== '/login') { logout(); throw new Error('Session expired, please login again'); }
+  if ((res.status === 401 || res.status === 403) && !/login|register/.test(path)) { logout(); throw new Error('Session expired, please login again'); }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
@@ -32,29 +33,69 @@ const safe = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast
 // ---------- auth ----------
 function showApp() {
   $('loginView').classList.add('hidden');
-  $('appView').classList.remove('hidden');
-  fillGroupSelects();
-  switchTab('dashboard');
+  if (role === 'patient') {
+    $('patientView').classList.remove('hidden');
+    safe(loadPortal)();
+  } else {
+    $('appView').classList.remove('hidden');
+    switchTab('dashboard');
+  }
 }
 function logout() {
   localStorage.removeItem('bb_token');
+  localStorage.removeItem('bb_role');
   token = null;
+  role = null;
   $('appView').classList.add('hidden');
+  $('patientView').classList.add('hidden');
   $('loginView').classList.remove('hidden');
 }
-$('loginForm').addEventListener('submit', safe(async (e) => {
-  e.preventDefault();
-  $('loginForm').querySelector('button').textContent = 'Logging in...';
+async function authenticate(form, path, newRole, label) {
+  const btn = form.querySelector('button');
+  btn.textContent = 'Please wait...';
+  btn.disabled = true;
   try {
-    const d = await api('/login', 'POST', { username: $('username').value, password: $('password').value });
+    const d = await api(path, 'POST', formData(form));
     token = d.token;
+    role = newRole;
     localStorage.setItem('bb_token', token);
+    localStorage.setItem('bb_role', role);
+    form.reset();
     showApp();
   } finally {
-    $('loginForm').querySelector('button').textContent = 'Login';
+    btn.textContent = label;
+    btn.disabled = false;
   }
-}));
+}
+$('adminForm').addEventListener('submit', safe(async (e) => { e.preventDefault(); await authenticate(e.target, '/login', 'admin', 'Admin Login'); }));
+$('patientLoginForm').addEventListener('submit', safe(async (e) => { e.preventDefault(); await authenticate(e.target, '/patient/login', 'patient', 'Login'); }));
+$('registerForm').addEventListener('submit', safe(async (e) => { e.preventDefault(); await authenticate(e.target, '/patient/register', 'patient', 'Register'); }));
 $('logoutBtn').addEventListener('click', logout);
+$('patientLogout').addEventListener('click', logout);
+
+$('loginTabs').addEventListener('click', (e) => {
+  const f = e.target.dataset.form;
+  if (!f) return;
+  document.querySelectorAll('#loginTabs button').forEach((b) => b.classList.toggle('active', b === e.target));
+  ['patientLoginForm', 'registerForm', 'adminForm'].forEach((id) => $(id).classList.toggle('hidden', id !== f));
+});
+
+// ---------- patient portal ----------
+async function loadPortal() {
+  const [me, rows] = await Promise.all([api('/me'), api('/me/requests')]);
+  $('patientName').textContent = `Hello, ${me.name}`;
+  $('patientInfo').textContent = `Blood group: ${me.blood_group}  |  Hospital: ${me.hospital}`;
+  $('myRequestsBody').innerHTML = rows.length ? rows.map((r) =>
+    `<tr><td>${r.id}</td><td>${esc(r.blood_group)}</td><td>${r.units_needed}</td><td>${esc(r.hospital)}</td><td>${badge(r.status)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">No requests yet</td></tr>';
+}
+$('myRequestForm').addEventListener('submit', safe(async (e) => {
+  e.preventDefault();
+  await api('/me/requests', 'POST', formData(e.target));
+  toast('Request submitted - the blood bank will review it');
+  e.target.reset();
+  loadPortal();
+}));
 
 // ---------- tabs ----------
 const loaders = { dashboard: loadDashboard, donors: loadDonors, patients: loadPatients, units: loadUnits, requests: loadRequests, transactions: loadTransactions };
@@ -175,4 +216,5 @@ async function loadTransactions() {
 }
 
 // ---------- start ----------
-if (token) showApp();
+fillGroupSelects();
+if (token && role) showApp(); else if (token) logout();
