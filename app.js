@@ -57,7 +57,7 @@ $('loginForm').addEventListener('submit', safe(async (e) => {
 $('logoutBtn').addEventListener('click', logout);
 
 // ---------- tabs ----------
-const loaders = { dashboard: loadDashboard, donors: loadDonors, units: loadUnits, requests: loadRequests, transactions: loadTransactions };
+const loaders = { dashboard: loadDashboard, donors: loadDonors, patients: loadPatients, units: loadUnits, requests: loadRequests, transactions: loadTransactions };
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((s) => s.classList.toggle('hidden', s.id !== tab));
   document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
@@ -105,6 +105,22 @@ $('donorForm').addEventListener('submit', safe(async (e) => {
   loadDonors();
 }));
 
+// ---------- patients ----------
+async function loadPatients() {
+  const rows = await api('/patients');
+  $('patientsBody').innerHTML = rows.length ? rows.map((p) =>
+    `<tr><td>${p.id}</td><td>${esc(p.name)}</td><td>${p.age}</td><td>${esc(p.gender)}</td><td>${esc(p.blood_group)}</td>
+     <td>${esc(p.hospital)}</td><td>${esc(p.phone)}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="muted">No patients yet</td></tr>';
+}
+$('patientForm').addEventListener('submit', safe(async (e) => {
+  e.preventDefault();
+  await api('/patients', 'POST', formData(e.target));
+  toast('Patient registered');
+  e.target.reset();
+  loadPatients();
+}));
+
 // ---------- blood units ----------
 async function loadUnits() {
   const [units, donors] = await Promise.all([api('/units'), api('/donors')]);
@@ -125,7 +141,9 @@ $('unitForm').addEventListener('submit', safe(async (e) => {
 
 // ---------- requests ----------
 async function loadRequests() {
-  const rows = await api('/requests');
+  const [rows, patients] = await Promise.all([api('/requests'), api('/patients')]);
+  $('patientSelect').innerHTML = '<option value="">Select patient *</option>' +
+    patients.map((p) => `<option value="${p.id}">#${p.id} ${esc(p.name)} (${esc(p.blood_group)}) - ${esc(p.hospital)}</option>`).join('');
   $('requestsBody').innerHTML = rows.length ? rows.map((r) =>
     `<tr><td>${r.id}</td><td>${esc(r.patient_name)}</td><td>${esc(r.hospital)}</td><td>${esc(r.blood_group)}</td><td>${r.units_needed}</td>
      <td>${badge(r.status)}</td>
