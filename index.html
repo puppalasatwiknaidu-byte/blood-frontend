@@ -3,100 +3,96 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Blood Bank Management System</title>
+  <title>Blood Bank - Patient Portal</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="toast"></div>
 
-  <!-- LOGIN -->
+  <!-- PATIENT LOGIN / REGISTER -->
   <section id="loginView" class="login">
-    <form id="loginForm" class="card">
+    <div class="card">
       <h1>🩸 Blood Bank</h1>
-      <p class="muted">Admin login</p>
-      <input id="username" placeholder="Username" required />
-      <input id="password" type="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
+      <p class="muted">Patient portal</p>
+      <div class="tabs" id="loginTabs">
+        <button data-form="loginForm" class="active">Login</button>
+        <button data-form="registerForm">Register</button>
+      </div>
+
+      <form id="loginForm">
+        <input name="username" placeholder="Username" required />
+        <input name="password" type="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+
+      <form id="registerForm" class="hidden">
+        <input name="name" placeholder="Full name *" required />
+        <input name="age" type="number" min="0" placeholder="Age *" required />
+        <select name="gender"><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select>
+        <input name="phone" placeholder="Phone" />
+        <select name="blood_group" class="groupSelect" required></select>
+        <input name="hospital" placeholder="Hospital *" required />
+        <input name="username" placeholder="Choose username *" required />
+        <input name="password" type="password" placeholder="Choose password (min 6) *" required />
+        <button type="submit">Register</button>
+      </form>
+
+      <a href="admin.html" class="muted">Admin login &rarr;</a>
+    </div>
   </section>
 
-  <!-- APP -->
-  <div id="appView" class="hidden">
+  <!-- PATIENT PORTAL -->
+  <div id="portal" class="hidden">
     <header>
       <strong>🩸 Blood Bank</strong>
       <nav id="nav">
-        <button data-tab="dashboard" class="active">Dashboard</button>
-        <button data-tab="donors">Donors</button>
-        <button data-tab="units">Blood Units</button>
-        <button data-tab="requests">Requests</button>
-        <button data-tab="transactions">Transactions</button>
+        <button data-tab="requests" class="active">My Requests</button>
+        <button data-tab="profile">My Profile</button>
       </nav>
+      <span id="hello"></span>
       <button id="logoutBtn" class="ghost">Logout</button>
     </header>
 
     <main>
-      <!-- Dashboard -->
-      <section id="dashboard" class="tab">
-        <h2>Blood Stock</h2>
-        <div id="stockCards" class="grid"></div>
-        <div class="row">
-          <h3>Expiring within 7 days</h3>
-          <button id="discardBtn" class="ghost">Discard expired units</button>
-        </div>
-        <p id="expiredNote" class="muted"></p>
-        <div class="scroll"><table><thead><tr><th>Unit</th><th>Group</th><th>Expires</th></tr></thead><tbody id="expiringBody"></tbody></table></div>
-      </section>
-
-      <!-- Donors -->
-      <section id="donors" class="tab hidden">
-        <h2>Donor Registration &amp; Screening</h2>
-        <form id="donorForm" class="card form-grid">
-          <input name="name" placeholder="Full name *" required />
-          <input name="age" type="number" min="1" placeholder="Age *" required />
-          <select name="gender"><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select>
-          <input name="phone" placeholder="Phone" />
-          <select name="blood_group" class="groupSelect" required></select>
-          <input name="weight" type="number" step="0.1" placeholder="Weight (kg) *" required />
-          <input name="hemoglobin" type="number" step="0.1" placeholder="Hemoglobin (g/dL) *" required />
-          <label class="muted">Last donation<input name="last_donation" type="date" /></label>
-          <button type="submit">Register &amp; Screen</button>
-        </form>
-        <div class="scroll"><table><thead><tr><th>ID</th><th>Name</th><th>Group</th><th>Age</th><th>Phone</th><th>Status</th><th>Screening note</th></tr></thead><tbody id="donorsBody"></tbody></table></div>
-      </section>
-
-      <!-- Units -->
-      <section id="units" class="tab hidden">
-        <h2>Blood Collection &amp; Testing</h2>
-        <form id="unitForm" class="card form-grid">
-          <select name="donor_id" id="donorSelect" required></select>
-          <select name="test_result"><option value="Passed">Lab tests: Passed</option><option value="Failed">Lab tests: Failed</option></select>
-          <button type="submit">Collect &amp; Store</button>
-        </form>
-        <div class="scroll"><table><thead><tr><th>Unit</th><th>Donor</th><th>Group</th><th>Tests</th><th>Collected</th><th>Expiry</th><th>Status</th></tr></thead><tbody id="unitsBody"></tbody></table></div>
-      </section>
-
       <!-- Requests -->
-      <section id="requests" class="tab hidden">
-        <h2>Blood Requests</h2>
+      <section id="requests" class="tab">
+        <h2>Request Blood</h2>
+        <p id="info" class="muted"></p>
         <form id="requestForm" class="card form-grid">
-          <input name="patient_name" placeholder="Patient name *" required />
-          <input name="hospital" placeholder="Hospital *" required />
-          <select name="blood_group" class="groupSelect" required></select>
           <input name="units_needed" type="number" min="1" placeholder="Units needed *" required />
           <button type="submit">Submit Request</button>
         </form>
-        <div class="scroll"><table><thead><tr><th>ID</th><th>Patient</th><th>Hospital</th><th>Group</th><th>Units</th><th>Status</th><th>Action</th></tr></thead><tbody id="requestsBody"></tbody></table></div>
+        <h3 style="margin-bottom:10px">My Requests</h3>
+        <div class="scroll"><table><thead><tr><th>ID</th><th>Group</th><th>Units</th><th>Hospital</th><th>Status</th><th>Action</th></tr></thead><tbody id="requestsBody"></tbody></table></div>
+        <p class="muted">You can edit or cancel a request while it is still Pending.</p>
       </section>
 
-      <!-- Transactions -->
-      <section id="transactions" class="tab hidden">
-        <h2>Transaction Records</h2>
-        <div class="scroll"><table><thead><tr><th>Time</th><th>Type</th><th>Unit</th><th>Request</th><th>Note</th></tr></thead><tbody id="transactionsBody"></tbody></table></div>
+      <!-- Profile -->
+      <section id="profile" class="tab hidden">
+        <h2>My Profile</h2>
+        <form id="profileForm" class="card form-grid">
+          <label class="muted">Full name<input name="name" required /></label>
+          <label class="muted">Age<input name="age" type="number" min="0" required /></label>
+          <label class="muted">Gender<select name="gender"><option value="">-</option><option>Male</option><option>Female</option><option>Other</option></select></label>
+          <label class="muted">Phone<input name="phone" /></label>
+          <label class="muted">Blood group<select name="blood_group" class="groupSelect" required></select></label>
+          <label class="muted">Hospital<input name="hospital" required /></label>
+          <button type="submit">Save Changes</button>
+        </form>
+        <p class="muted">Changing your blood group or hospital also updates your pending requests.</p>
+
+        <h3 style="margin:24px 0 10px">Change Password</h3>
+        <form id="passwordForm" class="card form-grid">
+          <input name="current_password" type="password" placeholder="Current password" required />
+          <input name="new_password" type="password" placeholder="New password (min 6)" required />
+          <button type="submit">Update Password</button>
+        </form>
       </section>
     </main>
   </div>
 
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="common.js"></script>
+  <script src="patient.js"></script>
 </body>
 </html>
